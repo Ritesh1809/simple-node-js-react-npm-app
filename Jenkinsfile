@@ -1,5 +1,5 @@
 pipeline {
-    agent any
+    agent { label 'local' }
 
     tools {
         nodejs "NodeJS" // This is the name of the NodeJS installation in Jenkins
