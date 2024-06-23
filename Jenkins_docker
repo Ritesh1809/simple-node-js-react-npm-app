@@ -16,7 +16,7 @@ pipeline {
         stage('Pull and Tag Images') {
             steps {
                 script {
-                    docker.withRegistry('https://registry.hub.docker.com', 'docker-hub-credentials') {
+                    docker.withRegistry('https://registry.hub.docker.com', '1bf8757c-05f1-4e77-bcce-17da50759cd5') {
                         docker.image(POSTGRES_IMAGE).pull()
                         docker.image(REDIS_IMAGE).pull()
                         docker.image(MONGO_EXPRESS_IMAGE).pull()
