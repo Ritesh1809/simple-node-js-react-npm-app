@@ -29,13 +29,7 @@ pipeline {
             }
         }
     }
-
-    post {
-        always {
-            // Display the last few lines of the nohup output to check if the server started correctly
-            sh 'tail -n 10 nohup.out'
-        }
-    }
+    
 }
 
 
