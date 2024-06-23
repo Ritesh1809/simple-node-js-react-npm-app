@@ -1,8 +1,12 @@
 pipeline {
-    agent any
+    agent { label 'local' }
 
     tools {
-        nodejs "NodeJS" // This is the name of the NodeJS installation in Jenkins
+        nodejs "NodeJS" // Adjust this to your NodeJS installation name in Jenkins
+    }
+
+    environment {
+        PORT = '3004' // Set the PORT environment variable
     }
 
     stages {
@@ -20,9 +24,12 @@ pipeline {
 
         stage('Serve') {
             steps {
-                sh 'npm start &'
+                // Use 'nohup' to keep the server running in the background
+                sh 'nohup npm start &'
             }
         }
     }
+    
 }
+
 
