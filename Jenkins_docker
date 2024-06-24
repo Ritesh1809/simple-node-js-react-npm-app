@@ -2,73 +2,56 @@ pipeline {
     agent any
 
     environment {
-        LOCAL_REGISTRY = "localhost:5000"
-        MONGO_USERNAME = "ati"
-        MONGO_PASSWORD = "ati1234"
+        DOCKER_REGISTRY = "localhost:5000"
+        DOCKER_USERNAME = "ati"
+        DOCKER_PASSWORD = "ati1234"
     }
 
     stages {
-        stage('Pull Latest Images') {
+        stage('Pull Images from Public Registry') {
             steps {
                 script {
-                    sh '''
-                    docker pull postgres:latest
-                    docker pull redis:latest
-                    docker pull mongo:latest
-                    docker pull mongo-express:latest
-                    '''
+                    docker.withRegistry('https://registry.hub.docker.com', DOCKER_USERNAME, DOCKER_PASSWORD) {
+                        docker.pull('postgres:latest')
+                        docker.pull('redis:latest')
+                        docker.pull('mongo:latest')
+                        docker.pull('mongo-express:latest')
+                    }
                 }
             }
         }
 
-        stage('Tag Images for Local Registry') {
+        stage('Build Images as Containers') {
             steps {
                 script {
-                    sh '''
-                    docker tag postgres:latest ${LOCAL_REGISTRY}/postgres:latest
-                    docker tag redis:latest ${LOCAL_REGISTRY}/redis:latest
-                    docker tag mongo:latest ${LOCAL_REGISTRY}/mongo:latest
-                    docker tag mongo-express:latest ${LOCAL_REGISTRY}/mongo-express:latest
-                    '''
+                    docker.build('my-postgres', 'postgres:latest', '--build-arg POSTGRES_PASSWORD=mysecretpassword')
+                    docker.build('my-redis', 'redis:latest')
+                    docker.build('my-mongo', 'mongo:latest')
+                    docker.build('my-mongo-express', 'mongo-express:latest')
                 }
             }
         }
 
-        stage('Push Images to Local Registry') {
+        stage('Host Images in a Secured Local Registry') {
             steps {
                 script {
-                    sh '''
-                    docker push ${LOCAL_REGISTRY}/postgres:latest
-                    docker push ${LOCAL_REGISTRY}/redis:latest
-                    docker push ${LOCAL_REGISTRY}/mongo:latest
-                    docker push ${LOCAL_REGISTRY}/mongo-express:latest
-                    '''
+                    docker.withRegistry('http://${DOCKER_REGISTRY}', DOCKER_USERNAME, DOCKER_PASSWORD) {
+                        docker.image('my-postgres').push('latest')
+                        docker.image('my-redis').push('latest')
+                        docker.image('my-mongo').push('latest')
+                        docker.image('my-mongo-express').push('latest')
+                    }
                 }
             }
         }
 
-        stage('Run Containers') {
+        stage('Connect Mongo Express Frontend to MongoDB Backend') {
             steps {
                 script {
-                    sh '''
-                    docker network create my_network || true
-
-                    docker run -d --name postgres --net my_network ${LOCAL_REGISTRY}/postgres:latest
-                    docker run -d --name redis --net my_network ${LOCAL_REGISTRY}/redis:latest
-                    docker run -d --name mongo -e MONGO_INITDB_ROOT_USERNAME=${MONGO_USERNAME} -e MONGO_INITDB_ROOT_PASSWORD=${MONGO_PASSWORD} --net my_network ${LOCAL_REGISTRY}/mongo:latest
-                    docker run -d --name mongo-express -e ME_CONFIG_MONGODB_ADMINUSERNAME=${MONGO_USERNAME} -e ME_CONFIG_MONGODB_ADMINPASSWORD=${MONGO_PASSWORD} -e ME_CONFIG_MONGODB_SERVER=mongo --net my_network -p 8081:8081 ${LOCAL_REGISTRY}/mongo-express:latest
-                    '''
+                    docker.network('my_network')
+                    docker.run('--name my-mongo -d mongo:latest')
+                    docker.run('--name my-mongo-express -d -p 8081:8081 --network my_network -e ME_CONFIG_MONGODB_SERVER=my-mongo -e ME_CONFIG_MONGODB_ADMINUSERNAME=${DOCKER_USERNAME} -e ME_CONFIG_MONGODB_ADMINPASSWORD=${DOCKER_PASSWORD} mongo-express:latest')
                 }
-            }
-        }
-    }
-
-    post {
-        always {
-            script {
-                sh '''
-                echo "All containers are up and running."
-                '''
             }
         }
     }
