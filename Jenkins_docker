@@ -7,7 +7,14 @@ pipeline {
         DOCKER_PASSWORD = "ati1234"
     }
 
-    stages {
+
+// A Docker registry is a storage and distribution system for Docker images. 
+//It allows you to store Docker images privately within your organization or publicly for anyone to access.
+  
+
+
+
+stages {
         stage('Pull Images from Public Registry') {
             steps {
                 script {
